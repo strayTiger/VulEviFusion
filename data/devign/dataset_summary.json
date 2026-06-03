@@ -1,0 +1,26 @@
+{
+  "dataset": "devign",
+  "splits": {
+    "train": {
+      "source": "data/devign/train.jsonl",
+      "prepared": "data/devign/train.jsonl",
+      "total": 21854,
+      "positives": 9968,
+      "negatives": 11886
+    },
+    "valid": {
+      "source": "data/devign/valid.jsonl",
+      "prepared": "data/devign/valid.jsonl",
+      "total": 2732,
+      "positives": 1246,
+      "negatives": 1486
+    },
+    "test": {
+      "source": "data/devign/test.jsonl",
+      "prepared": "data/devign/test.jsonl",
+      "total": 2732,
+      "positives": 1246,
+      "negatives": 1486
+    }
+  }
+}

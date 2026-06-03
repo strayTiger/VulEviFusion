@@ -1,0 +1,26 @@
+{
+  "dataset": "reveal",
+  "splits": {
+    "train": {
+      "source": "data/reveal/train.jsonl",
+      "prepared": "data/reveal/train.jsonl",
+      "total": 18187,
+      "positives": 1792,
+      "negatives": 16395
+    },
+    "valid": {
+      "source": "data/reveal/valid.jsonl",
+      "prepared": "data/reveal/valid.jsonl",
+      "total": 2273,
+      "positives": 224,
+      "negatives": 2049
+    },
+    "test": {
+      "source": "data/reveal/test.jsonl",
+      "prepared": "data/reveal/test.jsonl",
+      "total": 2274,
+      "positives": 224,
+      "negatives": 2050
+    }
+  }
+}

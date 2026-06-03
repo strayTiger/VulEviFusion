@@ -1,0 +1,23 @@
+.env
+__pycache__/
+*.py[cod]
+*.log
+
+# Runtime outputs
+outputs/
+outputs_*/
+outputs_v*/
+checkpoints/
+checkpoints_*/
+
+# Model artifacts
+*.bin
+*.pt
+*.pth
+*.safetensors
+
+# Local/editor files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
