@@ -7,12 +7,6 @@ import json
 import os
 from typing import Any, Dict, Iterable, List, Optional
 
-try:
-    from sklearn.metrics import average_precision_score, roc_auc_score
-except Exception:  # pragma: no cover
-    average_precision_score = None
-    roc_auc_score = None
-
 
 def read_jsonl(path: str) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
@@ -62,11 +56,16 @@ def feature_map(feature_rows: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, A
 
 
 def metric_counts(labels: List[int], preds: List[int]) -> Dict[str, int]:
-    tp = sum(1 for y, p in zip(labels, preds) if y == 1 and p == 1)
-    fp = sum(1 for y, p in zip(labels, preds) if y == 0 and p == 1)
-    fn = sum(1 for y, p in zip(labels, preds) if y == 1 and p == 0)
-    tn = sum(1 for y, p in zip(labels, preds) if y == 0 and p == 0)
-    return {"tn": tn, "fp": fp, "fn": fn, "tp": tp}
+    true_positive = sum(1 for y, p in zip(labels, preds) if y == 1 and p == 1)
+    false_positive = sum(1 for y, p in zip(labels, preds) if y == 0 and p == 1)
+    false_negative = sum(1 for y, p in zip(labels, preds) if y == 1 and p == 0)
+    true_negative = sum(1 for y, p in zip(labels, preds) if y == 0 and p == 0)
+    return {
+        "true_negative": true_negative,
+        "false_positive": false_positive,
+        "false_negative": false_negative,
+        "true_positive": true_positive,
+    }
 
 
 def compute_metrics(rows: List[Dict[str, Any]], threshold: Optional[float]) -> Dict[str, Any]:
@@ -81,18 +80,10 @@ def compute_metrics(rows: List[Dict[str, Any]], threshold: Optional[float]) -> D
 
     counts = metric_counts(labels, preds)
     total = len(rows)
-    precision = counts["tp"] / (counts["tp"] + counts["fp"]) if counts["tp"] + counts["fp"] else 0.0
-    recall = counts["tp"] / (counts["tp"] + counts["fn"]) if counts["tp"] + counts["fn"] else 0.0
+    precision = counts["true_positive"] / (counts["true_positive"] + counts["false_positive"]) if counts["true_positive"] + counts["false_positive"] else 0.0
+    recall = counts["true_positive"] / (counts["true_positive"] + counts["false_negative"]) if counts["true_positive"] + counts["false_negative"] else 0.0
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-    acc = (counts["tp"] + counts["tn"]) / total if total else 0.0
-
-    auc = None
-    ap = None
-    if total and len(set(labels)) > 1:
-        if roc_auc_score is not None:
-            auc = float(roc_auc_score(labels, probs))
-        if average_precision_score is not None:
-            ap = float(average_precision_score(labels, probs))
+    acc = (counts["true_positive"] + counts["true_negative"]) / total if total else 0.0
 
     return {
         "n": total,
@@ -102,10 +93,7 @@ def compute_metrics(rows: List[Dict[str, Any]], threshold: Optional[float]) -> D
         "precision": float(precision),
         "recall": float(recall),
         "f1": float(f1),
-        "auc": auc,
-        "ap": ap,
         "threshold": used_threshold,
-        **counts,
     }
 
 

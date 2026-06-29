@@ -1,17 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-valid_tuned_ensemble.py
-
-Search model subsets, fusion weights, and decision thresholds on the validation
-set, then report the selected ensemble on the test set.
-
-Example:
-
-python src/valid_tuned_ensemble.py --checkpoint_root outputs/lin_et_al/checkpoints_screened_thr --methods code_only,code_vul_path_top1_screened,code_vul_path_top3_screened,code_desc_screened,code_vul_path_desc_top3_screened,path_desc_code_top1_screened,path_desc_code_top3_screened --output_dir outputs/lin_et_al/ensemble_screened/auto_search_k2_7 --auto_combinations --combo_min_size 2 --combo_max_size 7 --weight_step 0.1 --max_weight_configs 20000 --selection_metric f1
-"""
-
 import argparse
 import csv
 import json
@@ -192,6 +181,42 @@ def compute_metrics(labels: np.ndarray, probs: np.ndarray, threshold: float) -> 
         "fn": int(fn),
         "tp": int(tp),
     }
+
+
+def compute_fixed_threshold_reports(
+    result: Dict[str, Any],
+    thresholds: List[float],
+) -> Dict[str, Dict[str, Any]]:
+    reports: Dict[str, Dict[str, Any]] = {}
+    for threshold in thresholds:
+        key = f"{float(threshold):g}"
+        reports[key] = {
+            "threshold": float(threshold),
+            "valid_metrics": compute_metrics(
+                result["valid_labels"],
+                result["valid_probs"],
+                float(threshold),
+            ),
+            "test_metrics": compute_metrics(
+                result["test_labels"],
+                result["test_probs"],
+                float(threshold),
+            ),
+        }
+    return reports
+
+
+def parse_float_csv(text: str) -> List[float]:
+    values: List[float] = []
+    for item in text.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        value = float(item)
+        if not 0.0 <= value <= 1.0:
+            raise ValueError("Fixed thresholds must be in [0, 1].")
+        values.append(value)
+    return values
 
 
 def compute_metrics_fast(
@@ -433,7 +458,7 @@ def run_ensemble(
 
 
 def result_to_public_dict(result: Dict[str, Any], args: argparse.Namespace) -> Dict[str, Any]:
-    return {
+    public = {
         "methods": result["methods"],
         "weights": result["weights"],
         "threshold_selected_on_valid": result["threshold"],
@@ -443,6 +468,13 @@ def result_to_public_dict(result: Dict[str, Any], args: argparse.Namespace) -> D
         "common_test_rows": result["common_test_rows"],
         "args": vars(args),
     }
+    fixed_thresholds = parse_float_csv(getattr(args, "fixed_thresholds", ""))
+    if fixed_thresholds:
+        public["fixed_threshold_reports"] = compute_fixed_threshold_reports(
+            result,
+            fixed_thresholds,
+        )
+    return public
 
 
 def save_ensemble_result(result: Dict[str, Any], output_dir: str, args: argparse.Namespace) -> None:
@@ -456,7 +488,13 @@ def save_ensemble_result(result: Dict[str, Any], output_dir: str, args: argparse
         os.path.join(output_dir, "test_predictions.jsonl"),
         make_prediction_rows(result["test_metas"], result["test_labels"], result["test_probs"], result["threshold"]),
     )
-    write_json(os.path.join(output_dir, "ensemble_metrics.json"), result_to_public_dict(result, args))
+    public = result_to_public_dict(result, args)
+    write_json(os.path.join(output_dir, "ensemble_metrics.json"), public)
+    if "fixed_threshold_reports" in public:
+        write_json(
+            os.path.join(output_dir, "fixed_threshold_metrics.json"),
+            public["fixed_threshold_reports"],
+        )
 
 
 def combo_summary_row(
@@ -718,6 +756,14 @@ def main() -> None:
         help="Skip combinations whose simplex weight grid is larger than this value.",
     )
     parser.add_argument("--top_k", type=int, default=20, help="Rows shown in combination_summary.md.")
+    parser.add_argument(
+        "--fixed_thresholds",
+        default="",
+        help=(
+            "Optional comma-separated thresholds, for example 0.5. "
+            "They are evaluated with the validation-selected model subset and weights unchanged."
+        ),
+    )
     args = parser.parse_args()
 
     methods = parse_methods(args.methods)

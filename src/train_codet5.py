@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-train_codebert.py
+train_codet5.py
 
-Train a CodeBERT binary vulnerability classifier for one input view. The best
+Train a CodeT5 binary vulnerability classifier for one input view. The best
 model and the classification threshold are selected on the validation set, then
 applied once to the test set.
 
 Example:
 
-python src/train_codebert.py --train_file outputs/lin_et_al/experiment_inputs_screened/code_vul_path_top3_screened/train.jsonl --valid_file outputs/lin_et_al/experiment_inputs_screened/code_vul_path_top3_screened/valid.jsonl --test_file outputs/lin_et_al/experiment_inputs_screened/code_vul_path_top3_screened/test.jsonl --model_name microsoft/codebert-base --output_dir outputs/lin_et_al/checkpoints_screened_thr/code_vul_path_top3_screened --max_length 512 --batch_size 16 --eval_batch_size 32 --learning_rate 2e-5 --epochs 20 --class_weight balanced --metric_for_best f1 --threshold_metric f1 --save_predictions
+python src/train_codet5.py --train_file outputs/lin_et_al/experiment_inputs_screened/code_vul_path_top3_screened/train.jsonl --valid_file outputs/lin_et_al/experiment_inputs_screened/code_vul_path_top3_screened/valid.jsonl --test_file outputs/lin_et_al/experiment_inputs_screened/code_vul_path_top3_screened/test.jsonl --model_name Salesforce/codet5-base --output_dir outputs/lin_et_al/checkpoints_screened_codet5/code_vul_path_top3_screened --max_length 512 --batch_size 16 --eval_batch_size 32 --learning_rate 2e-5 --epochs 20 --class_weight balanced --metric_for_best f1 --threshold_metric f1 --fp16 --save_predictions
 """
 
 import argparse
@@ -33,9 +33,6 @@ from transformers import (
 from sklearn.metrics import (
     accuracy_score,
     precision_recall_fscore_support,
-    roc_auc_score,
-    average_precision_score,
-    confusion_matrix,
 )
 
 try:
@@ -192,34 +189,11 @@ def compute_metrics(labels: List[int], preds: List[int], probs: List[float]) -> 
         zero_division=0,
     )
 
-    auc = None
-    ap = None
-    if len(set(labels)) == 2:
-        try:
-            auc = roc_auc_score(labels, probs)
-        except Exception:
-            auc = None
-        try:
-            ap = average_precision_score(labels, probs)
-        except Exception:
-            ap = None
-
-    try:
-        tn, fp, fn, tp = confusion_matrix(labels, preds, labels=[0, 1]).ravel()
-    except Exception:
-        tn, fp, fn, tp = 0, 0, 0, 0
-
     return {
         "acc": safe_float(acc),
         "precision": safe_float(precision),
         "recall": safe_float(recall),
         "f1": safe_float(f1),
-        "auc": safe_float(auc),
-        "ap": safe_float(ap),
-        "tn": int(tn),
-        "fp": int(fp),
-        "fn": int(fn),
-        "tp": int(tp),
     }
 
 
@@ -403,7 +377,7 @@ def train(args):
     ensure_dir(args.output_dir)
 
     print("=" * 80)
-    print("Training CodeBERT classifier with validation threshold tuning")
+    print("Training CodeT5 classifier with validation threshold tuning")
     print("=" * 80)
     print(f"Device      : {device}")
     print(f"Model       : {args.model_name}")
@@ -789,7 +763,7 @@ def main():
     parser.add_argument(
         "--model_name",
         type=str,
-        default="microsoft/codebert-base",
+        default="Salesforce/codet5-base",
         help="HuggingFace model name or local path.",
     )
 
@@ -822,7 +796,7 @@ def main():
         "--metric_for_best",
         type=str,
         default="f1",
-        choices=["f1", "auc", "ap", "acc", "precision", "recall"],
+        choices=["f1", "acc", "precision", "recall"],
         help="Metric used to select best checkpoint. With threshold tuning, this metric is computed at the valid-selected threshold.",
     )
 

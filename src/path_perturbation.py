@@ -11,9 +11,9 @@ inside <VUL_PATH_SCREENED> and measures probability changes.
 Example:
 
 python src/path_perturbation.py ^
-  --checkpoint_dir outputs/lin_et_al/checkpoints_screened_thr/code_vul_path_top3_screened ^
+  --checkpoint_dir outputs/lin_et_al/checkpoints_screened_codet5/code_vul_path_top3_screened ^
   --input_file outputs/lin_et_al/experiment_inputs_screened/code_vul_path_top3_screened/test.jsonl ^
-  --output_dir outputs/lin_et_al/perturbation_screened_thr/code_vul_path_top3 ^
+  --output_dir outputs/lin_et_al/perturbation_screened_codet5/code_vul_path_top3 ^
   --batch_size 32 ^
   --max_length 512 ^
   --save_predictions
@@ -203,32 +203,28 @@ def binary_metrics(labels: Sequence[int], probs: Sequence[float], threshold: flo
     if not labels:
         return {"n": 0}
 
-    tp = fp = tn = fn = 0
+    true_positive = false_positive = true_negative = false_negative = 0
     for label, prob in zip(labels, probs):
         pred = int(prob >= threshold)
         if label == 1 and pred == 1:
-            tp += 1
+            true_positive += 1
         elif label == 0 and pred == 1:
-            fp += 1
+            false_positive += 1
         elif label == 0 and pred == 0:
-            tn += 1
+            true_negative += 1
         elif label == 1 and pred == 0:
-            fn += 1
+            false_negative += 1
 
-    precision = tp / (tp + fp) if (tp + fp) else 0.0
-    recall = tp / (tp + fn) if (tp + fn) else 0.0
+    precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) else 0.0
+    recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) else 0.0
     f1 = 2.0 * precision * recall / (precision + recall) if (precision + recall) else 0.0
-    acc = (tp + tn) / len(labels)
+    acc = (true_positive + true_negative) / len(labels)
     return {
         "n": len(labels),
         "acc": float(acc),
         "precision": float(precision),
         "recall": float(recall),
         "f1": float(f1),
-        "tn": int(tn),
-        "fp": int(fp),
-        "fn": int(fn),
-        "tp": int(tp),
         "threshold": float(threshold),
     }
 

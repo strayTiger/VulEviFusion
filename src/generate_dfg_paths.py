@@ -11,7 +11,7 @@ Input JSONL example:
 {"func": "...", "func_name": "CVE-xxx.c", "target": 1, "idx": 123, "project": "LibPNG"}
 
 This is a practical C/C++ data-flow and vulnerability-path extractor. It is not
-the official GraphCodeBERT extractor.
+an official extractor from any pretrained model release.
 
 Example:
 
@@ -222,10 +222,10 @@ def extract_lhs_variables(lhs_node, code_bytes: bytes) -> List[str]:
 
 
 def get_call_name(call_node, code_bytes: bytes) -> str:
-    fn = get_child_by_field(call_node, "function")
-    if fn is None:
+    function_node = get_child_by_field(call_node, "function")
+    if function_node is None:
         return ""
-    txt = node_text(fn, code_bytes).strip().replace(" ", "")
+    txt = node_text(function_node, code_bytes).strip().replace(" ", "")
     if "::" in txt:
         txt = txt.split("::")[-1]
     if "." in txt:
@@ -1250,16 +1250,16 @@ def process_split(split: str, input_dir: str, output_dir: str, code_key: str, ma
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--input_dir", type=str, required=True, help="Directory containing train.jsonl, valid.jsonl, test.jsonl")
-    ap.add_argument("--output_dir", type=str, required=True, help="Output directory")
-    ap.add_argument("--code_key", type=str, default="func", help="JSON key for source code")
-    ap.add_argument("--max_hops", type=int, default=6, help="Backward tracing hops from sink variables")
-    ap.add_argument("--max_paths_per_sample", type=int, default=5, help="Keep only top-k vulnerability-oriented evidence paths per sample")
-    ap.add_argument("--include_pointer_paths", action="store_true", help="Enable generic pointer dereference evidence paths; disabled by default because they are noisy")
-    ap.add_argument("--include_lifetime_leak_paths", action="store_true", help="Enable rough memory/resource leak candidate paths; disabled by default because they are noisy")
-    ap.add_argument("--splits", type=str, default="train,valid,test", help="Comma-separated split names")
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input_dir", type=str, required=True, help="Directory containing train.jsonl, valid.jsonl, test.jsonl")
+    parser.add_argument("--output_dir", type=str, required=True, help="Output directory")
+    parser.add_argument("--code_key", type=str, default="func", help="JSON key for source code")
+    parser.add_argument("--max_hops", type=int, default=6, help="Backward tracing hops from sink variables")
+    parser.add_argument("--max_paths_per_sample", type=int, default=5, help="Keep only top-k vulnerability-oriented evidence paths per sample")
+    parser.add_argument("--include_pointer_paths", action="store_true", help="Enable generic pointer dereference evidence paths; disabled by default because they are noisy")
+    parser.add_argument("--include_lifetime_leak_paths", action="store_true", help="Enable rough memory/resource leak candidate paths; disabled by default because they are noisy")
+    parser.add_argument("--splits", type=str, default="train,valid,test", help="Comma-separated split names")
+    args = parser.parse_args()
 
     for split in [s.strip() for s in args.splits.split(",") if s.strip()]:
         process_split(split=split, input_dir=args.input_dir, output_dir=args.output_dir, code_key=args.code_key, max_hops=args.max_hops, max_paths_per_sample=args.max_paths_per_sample, include_pointer_paths=args.include_pointer_paths, include_lifetime_leak_paths=args.include_lifetime_leak_paths)

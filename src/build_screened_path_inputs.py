@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Build screened vulnerability-path input variants for CodeBERT experiments.
+Build screened vulnerability-path input variants for CodeT5 experiments.
 
 The script reuses existing outputs/{dataset}/vul_paths and optional LLM descriptions.
 It does not regenerate DFG/path extraction. The goal is to keep only compact,
-high-signal path evidence before training.
+high-signal path evidence before training. It emits the five formal VulPathFusion
+candidate views used after validation selects CodeT5 + Top-3 paths.
 """
 
 import argparse
@@ -260,7 +261,6 @@ def build_variants_for_row(
     if vul_row is not None:
         paths = screen_paths(vul_row.get("vul_paths", []), top_k=top_k)
     path_block_topk = paths_to_block(paths, max_chars=max_path_chars)
-    path_block_top1 = paths_to_block(paths[:1], max_chars=max_path_chars)
 
     desc = ""
     if desc_row is not None:
@@ -289,11 +289,11 @@ def build_variants_for_row(
     )
 
     selected_blocks = [code_block]
-    if path_block_top1:
-        selected_blocks.append(path_block_top1)
-    variants["code_vul_path_top1_screened"] = make_variant(
+    if path_block_topk:
+        selected_blocks.append(path_block_topk)
+    variants[f"code_vul_path_top{top_k}_screened"] = make_variant(
         raw_row,
-        "code_vul_path_top1_screened",
+        f"code_vul_path_top{top_k}_screened",
         "\n".join(selected_blocks),
         target_key,
         {
@@ -303,31 +303,10 @@ def build_variants_for_row(
             "vul_path_is_real": has_path,
             "security_desc_is_real": False,
             "screened": True,
-            "screened_path_count": min(len(paths), 1),
+            "screened_path_count": len(paths),
             "path_first": False,
         },
     )
-
-    if top_k > 1:
-        selected_blocks = [code_block]
-        if path_block_topk:
-            selected_blocks.append(path_block_topk)
-        variants[f"code_vul_path_top{top_k}_screened"] = make_variant(
-            raw_row,
-            f"code_vul_path_top{top_k}_screened",
-            "\n".join(selected_blocks),
-            target_key,
-            {
-                "code": True,
-                "vul_path_text": has_path,
-                "security_desc": False,
-                "vul_path_is_real": has_path,
-                "security_desc_is_real": False,
-                "screened": True,
-                "screened_path_count": len(paths),
-                "path_first": False,
-            },
-        )
 
     selected_blocks = [code_block]
     if desc_block:
@@ -372,14 +351,14 @@ def build_variants_for_row(
     )
 
     selected_blocks = []
-    if path_block_top1:
-        selected_blocks.append(path_block_top1)
+    if path_block_topk:
+        selected_blocks.append(path_block_topk)
     if desc_block:
         selected_blocks.append(desc_block)
     selected_blocks.append(code_block)
-    variants["path_desc_code_top1_screened"] = make_variant(
+    variants[f"path_desc_code_top{top_k}_screened"] = make_variant(
         raw_row,
-        "path_desc_code_top1_screened",
+        f"path_desc_code_top{top_k}_screened",
         "\n".join(selected_blocks),
         target_key,
         {
@@ -389,34 +368,10 @@ def build_variants_for_row(
             "vul_path_is_real": has_path,
             "security_desc_is_real": has_desc,
             "screened": True,
-            "screened_path_count": min(len(paths), 1),
+            "screened_path_count": len(paths),
             "path_first": has_path or has_desc,
         },
     )
-
-    if top_k > 1:
-        selected_blocks = []
-        if path_block_topk:
-            selected_blocks.append(path_block_topk)
-        if desc_block:
-            selected_blocks.append(desc_block)
-        selected_blocks.append(code_block)
-        variants[f"path_desc_code_top{top_k}_screened"] = make_variant(
-            raw_row,
-            f"path_desc_code_top{top_k}_screened",
-            "\n".join(selected_blocks),
-            target_key,
-            {
-                "code": True,
-                "vul_path_text": has_path,
-                "security_desc": has_desc,
-                "vul_path_is_real": has_path,
-                "security_desc_is_real": has_desc,
-                "screened": True,
-                "screened_path_count": len(paths),
-                "path_first": has_path or has_desc,
-            },
-        )
 
     return variants
 
