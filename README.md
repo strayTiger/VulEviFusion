@@ -53,7 +53,7 @@ The released workflow has four executable stages:
 
 ## Design of VulPathFusion
 
-![VulPathFusion framework](./vulpathfusion_framework.png)
+![VulPathFusion framework](./vulevifusion_framework_01.png)
 
 The figure shows the full paper-level design. This repository releases the
 evidence construction, description generation, five-view input construction,
