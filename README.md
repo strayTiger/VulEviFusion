@@ -1,12 +1,12 @@
-# VulPathFusion: Validation-Selected Fusion of Path and Semantic Evidence
+# VulEviFusion: Validation-Selected Fusion of Path and Semantic Evidence
 
-VulPathFusion is a C/C++ function-level vulnerability detection workflow that
+VulEviFusion is a C/C++ function-level vulnerability detection workflow that
 constructs vulnerability-oriented path evidence, rewrites that evidence into
 conservative security descriptions, and trains CodeT5 classifiers on formal
 evidence views.
 
 The key idea is to avoid treating raw source code, static path evidence, and
-LLM-generated descriptions as one fixed input. VulPathFusion first constructs
+LLM-generated descriptions as one fixed input. VulEviFusion first constructs
 screened Top-3 vulnerability paths, uses the LLM only as a constrained evidence
 rewriter, and then trains CodeT5 classifiers on several formal views. In the full
 paper, view subsets, weights, and thresholds are selected only on the validation
@@ -14,12 +14,12 @@ set before final test reporting.
 
 This GitHub release is a compact reproducibility package. It contains the data
 preparation, five-view input construction, CodeT5 single-view training, and
-validation-selected VulPathFusion fusion script. It intentionally excludes
+validation-selected VulEviFusion fusion script. It intentionally excludes
 trained checkpoints, prediction files, local automation scripts, and `outputs`.
 
 ## Overview
 
-VulPathFusion addresses three practical issues in neural vulnerability detection:
+VulEviFusion addresses three practical issues in neural vulnerability detection:
 
 1. **Source tokens alone hide security-relevant relations.**  
    Raw C/C++ code often does not explicitly expose how variables flow into
@@ -27,7 +27,7 @@ VulPathFusion addresses three practical issues in neural vulnerability detection
    expressions.
 
 2. **Full program graphs can be noisy under a 512-token model budget.**  
-   VulPathFusion therefore extracts compact, vulnerability-oriented evidence
+   VulEviFusion therefore extracts compact, vulnerability-oriented evidence
    paths instead of appending all available graph context.
 
 3. **LLM descriptions should not become label leakage.**  
@@ -51,14 +51,14 @@ The released workflow has four executable stages:
    Train each view independently, then search view subsets, weights, and
    thresholds on the validation set before reporting fixed test results.
 
-## Design of VulPathFusion
+## Design of VulEviFusion
 
-![VulPathFusion framework](./vulevifusion_framework_01.png)
+![VulEviFusion framework](./vulevifusion_framework_01.png)
 
 The figure shows the full paper-level design. This repository releases the
 evidence construction, description generation, five-view input construction,
 single-view CodeT5 training utilities, and the validation-selected fusion script
-used to produce VulPathFusion's final result.
+used to produce VulEviFusion's final result.
 
 ## Main Features
 
@@ -82,11 +82,11 @@ used to produce VulPathFusion's final result.
 ## Repository Structure
 
 ```text
-VulPathFusion_github/
+VulEviFusion_github/
   README.md
   requirements.txt
   .env.example
-  vulpathfusion_framework.png
+  VulEviFusion_framework.png
   docs/
     workflow_zh.md
   src/
@@ -94,7 +94,7 @@ VulPathFusion_github/
     generate_security_description.py
     build_screened_path_inputs.py
     train_codet5.py
-    run_vulpathfusion_fusion.py
+    run_VulEviFusion_fusion.py
     analyze_prediction_subsets.py
     path_perturbation.py
   data/
@@ -277,18 +277,18 @@ outputs/lin_et_al/checkpoints_screened_codet5/code_vul_path_top3_screened/thresh
 The best checkpoint and threshold are selected on the validation set. The test
 set is used only for final reporting.
 
-### Step 5: Run Validation-Tuned VulPathFusion Fusion
+### Step 5: Run Validation-Tuned VulEviFusion Fusion
 
 After training all five formal views with `--save_predictions`, run the final
-VulPathFusion fusion search. The script searches view subsets, fusion weights,
+VulEviFusion fusion search. The script searches view subsets, fusion weights,
 and the classification threshold on the validation set, then reports the fixed
 configuration on the test set:
 
 ```bash
-python src/run_vulpathfusion_fusion.py \
+python src/run_VulEviFusion_fusion.py \
   --checkpoint_root outputs/lin_et_al/checkpoints_screened_codet5 \
   --methods code_only,code_vul_path_top3_screened,code_desc_screened,code_vul_path_desc_top3_screened,path_desc_code_top3_screened \
-  --output_dir outputs/lin_et_al/vulpathfusion_fusion \
+  --output_dir outputs/lin_et_al/VulEviFusion_fusion \
   --auto_combinations \
   --combo_min_size 2 \
   --combo_max_size 5 \
@@ -300,16 +300,16 @@ python src/run_vulpathfusion_fusion.py \
 Expected outputs:
 
 ```text
-outputs/lin_et_al/vulpathfusion_fusion/best_ensemble_metrics.json
-outputs/lin_et_al/vulpathfusion_fusion/ensemble_metrics.json
-outputs/lin_et_al/vulpathfusion_fusion/combination_summary.csv
-outputs/lin_et_al/vulpathfusion_fusion/combination_summary.json
-outputs/lin_et_al/vulpathfusion_fusion/combination_summary.md
-outputs/lin_et_al/vulpathfusion_fusion/valid_predictions.jsonl
-outputs/lin_et_al/vulpathfusion_fusion/test_predictions.jsonl
+outputs/lin_et_al/VulEviFusion_fusion/best_ensemble_metrics.json
+outputs/lin_et_al/VulEviFusion_fusion/ensemble_metrics.json
+outputs/lin_et_al/VulEviFusion_fusion/combination_summary.csv
+outputs/lin_et_al/VulEviFusion_fusion/combination_summary.json
+outputs/lin_et_al/VulEviFusion_fusion/combination_summary.md
+outputs/lin_et_al/VulEviFusion_fusion/valid_predictions.jsonl
+outputs/lin_et_al/VulEviFusion_fusion/test_predictions.jsonl
 ```
 
-The official VulPathFusion result should be taken from the validation-selected
+The official VulEviFusion result should be taken from the validation-selected
 entry in `best_ensemble_metrics.json`. The test split is evaluated only after
 the view subset, weights, and threshold have been fixed by validation data.
 
@@ -357,7 +357,7 @@ behavioral support for evidence use, not proof of causal program reasoning.
 ## Evaluation Metrics
 
 For manuscript reporting, use only the public classification metrics used by the
-current VulPathFusion protocol:
+current VulEviFusion protocol:
 
 - Accuracy
 - Precision
@@ -379,7 +379,7 @@ signals under a conservative prompt.
 ### Five Formal Views
 
 After CodeT5 + Top-3 is selected, this release constructs only the formal input
-views used by the current VulPathFusion protocol. Exploratory input variants are
+views used by the current VulEviFusion protocol. Exploratory input variants are
 not generated by default.
 
 ### No Test-Set Selection
@@ -390,7 +390,7 @@ The test split is evaluated after selection is frozen.
 ### Compact GitHub Release
 
 This repository includes the validation-selected fusion script needed to produce
-the final VulPathFusion result, while excluding trained checkpoints, generated
+the final VulEviFusion result, while excluding trained checkpoints, generated
 predictions, local automation scripts, and bulky `outputs` directories.
 
 ## Reproducibility Tips
